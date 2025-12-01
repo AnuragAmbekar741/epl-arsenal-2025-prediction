@@ -313,6 +313,157 @@ def create_arsenal_labels(df, arsenal_name='Arsenal'):
     return df
 
 
+def calculate_league_standings(df, season, up_to_date=None):
+    """
+    Calculate league standings for a given season up to a specific date.
+    
+    This ensures we only use information from matches played BEFORE the current match.
+    
+    Args:
+        df: DataFrame with all EPL matches
+        season: Season to calculate standings for (e.g., '2000-01')
+        up_to_date: Only include matches up to this date (datetime)
+        
+    Returns:
+        DataFrame: League standings with columns: Position, Team, Points, GoalDiff, GoalsFor, GoalsAgainst, Matches
+    """
+    # Filter for the season
+    season_df = df[df['Season'] == season].copy()
+    
+    # Filter for matches up to the specified date (if provided)
+    if up_to_date is not None:
+        season_df = season_df[season_df['Date'] < up_to_date]
+    
+    # Initialize standings dictionary
+    standings = {}
+    
+    # Process each match
+    for _, match in season_df.iterrows():
+        home_team = match['HomeTeam']
+        away_team = match['AwayTeam']
+        home_goals = match['FTHG']
+        away_goals = match['FTAG']
+        result = match['FTR']
+        
+        # Skip matches with missing critical data
+        if pd.isna(home_goals) or pd.isna(away_goals) or pd.isna(result):
+            continue
+        
+        # Initialize teams if not seen before
+        if home_team not in standings:
+            standings[home_team] = {
+                'Points': 0,
+                'GoalsFor': 0,
+                'GoalsAgainst': 0,
+                'Matches': 0
+            }
+        if away_team not in standings:
+            standings[away_team] = {
+                'Points': 0,
+                'GoalsFor': 0,
+                'GoalsAgainst': 0,
+                'Matches': 0
+            }
+        
+        # Update home team (convert to int to ensure no float issues)
+        standings[home_team]['GoalsFor'] += int(home_goals)
+        standings[home_team]['GoalsAgainst'] += int(away_goals)
+        standings[home_team]['Matches'] += 1
+        
+        if result == 'H':
+            standings[home_team]['Points'] += 3
+        elif result == 'D':
+            standings[home_team]['Points'] += 1
+            standings[away_team]['Points'] += 1
+        else:  # result == 'A'
+            standings[away_team]['Points'] += 3
+        
+        # Update away team (convert to int to ensure no float issues)
+        standings[away_team]['GoalsFor'] += int(away_goals)
+        standings[away_team]['GoalsAgainst'] += int(home_goals)
+        standings[away_team]['Matches'] += 1
+    
+    # Convert to DataFrame
+    standings_df = pd.DataFrame(standings).T
+    standings_df['Team'] = standings_df.index
+    standings_df['GoalDiff'] = standings_df['GoalsFor'] - standings_df['GoalsAgainst']
+    
+    # Sort by standings rules: Points (desc), GoalDiff (desc), GoalsFor (desc)
+    standings_df = standings_df.sort_values(
+        ['Points', 'GoalDiff', 'GoalsFor'],
+        ascending=[False, False, False]
+    ).reset_index(drop=True)
+    
+    # Add position
+    standings_df['Position'] = range(1, len(standings_df) + 1)
+    
+    # Ensure integer types for numeric columns (fill NaN with 0 first)
+    standings_df['Points'] = standings_df['Points'].fillna(0).astype(int)
+    standings_df['GoalDiff'] = standings_df['GoalDiff'].fillna(0).astype(int)
+    standings_df['GoalsFor'] = standings_df['GoalsFor'].fillna(0).astype(int)
+    standings_df['GoalsAgainst'] = standings_df['GoalsAgainst'].fillna(0).astype(int)
+    standings_df['Matches'] = standings_df['Matches'].fillna(0).astype(int)
+    standings_df['Position'] = standings_df['Position'].astype(int)
+    
+    # Reorder columns
+    standings_df = standings_df[['Position', 'Team', 'Points', 'GoalDiff', 'GoalsFor', 'GoalsAgainst', 'Matches']]
+    
+    return standings_df
+
+
+def calculate_all_season_standings(df, output_path='../data/processed/league_standings.csv'):
+    """
+    Calculate final league standings for all seasons and save to CSV.
+    
+    Args:
+        df: DataFrame with all EPL matches (cleaned)
+        output_path: Path to save the standings CSV
+        
+    Returns:
+        DataFrame: Combined standings for all seasons
+    """
+    print("\n" + "=" * 60)
+    print("CALCULATING LEAGUE STANDINGS FOR ALL SEASONS")
+    print("=" * 60)
+    
+    df['Date'] = pd.to_datetime(df['Date'])
+    all_standings = []
+    
+    seasons = sorted(df['Season'].unique())
+    
+    for season in seasons:
+        print(f"\nCalculating standings for {season}...")
+        
+        # Calculate final standings (no date filter = all matches in season)
+        standings = calculate_league_standings(df, season, up_to_date=None)
+        standings['Season'] = season
+        
+        all_standings.append(standings)
+        
+        # Show top 5 teams
+        print(f"  Top 5 teams:")
+        for _, row in standings.head(5).iterrows():
+            print(f"    {int(row['Position']):2d}. {row['Team']:20s} - {int(row['Points']):3d} pts (GD: {int(row['GoalDiff']):+3d})")
+    
+    # Combine all seasons
+    combined_standings = pd.concat(all_standings, ignore_index=True)
+    
+    # Reorder columns
+    combined_standings = combined_standings[['Season', 'Position', 'Team', 'Points', 'GoalDiff', 
+                                             'GoalsFor', 'GoalsAgainst', 'Matches']]
+    
+    # Save to CSV
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    combined_standings.to_csv(output_path, index=False)
+    
+    print(f"\n✓ Saved league standings: {output_path}")
+    print(f"  Total seasons: {len(seasons)}")
+    print(f"  Total rows: {len(combined_standings):,}")
+    
+    return combined_standings
+
+
 def preprocess_data(raw_data_dir='../data/raw', output_dir='../data/processed'):
     """
     Main preprocessing function that orchestrates all cleaning steps.
@@ -367,7 +518,7 @@ def preprocess_data(raw_data_dir='../data/raw', output_dir='../data/processed'):
     print(f"  Converted {date_converted:,} dates to datetime format")
     
     # Step 7: Filter for Arsenal matches
-    print("\n[7/7] Filtering for Arsenal matches...")
+    print("\n[7/8] Filtering for Arsenal matches...")
     arsenal_matches = filter_arsenal_matches(master_df)
     
     if len(arsenal_matches) > 0:
@@ -375,13 +526,26 @@ def preprocess_data(raw_data_dir='../data/raw', output_dir='../data/processed'):
         arsenal_matches = create_arsenal_labels(arsenal_matches)
         print(f"  Created Result labels: {arsenal_matches['Result'].value_counts().to_dict()}")
     
+    # Step 8: Calculate league standings for all seasons
+    print("\n[8/8] Calculating league standings for all seasons...")
+    
+    # Convert output_dir to Path and create directory
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    
+    # Calculate and save standings
+    standings_df = calculate_all_season_standings(master_df, 
+                                                  output_path=output_path / 'league_standings.csv')
+    
+    # Print summary
+    total_seasons = len(standings_df['Season'].unique()) if 'Season' in standings_df.columns else len(standings_df)
+    print(f"  ✓ Calculated standings for {total_seasons} seasons")
+    print(f"  ✓ Saved to: {output_path / 'league_standings.csv'}")
+    
     # Save processed data
     print("\n" + "=" * 60)
     print("SAVING PROCESSED DATA")
     print("=" * 60)
-    
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
     
     # Save cleaned master data
     master_output = output_path / 'epl_cleaned.csv'
@@ -395,6 +559,9 @@ def preprocess_data(raw_data_dir='../data/raw', output_dir='../data/processed'):
         arsenal_matches.to_csv(arsenal_output, index=False)
         print(f"\n✓ Saved Arsenal matches: {arsenal_output}")
         print(f"  Rows: {len(arsenal_matches):,}, Columns: {len(arsenal_matches.columns)}")
+    
+    # Standings already saved in calculate_all_season_standings function
+    print(f"\n✓ League standings already saved: {output_path / 'league_standings.csv'}")
     
     print("\n" + "=" * 60)
     print("PREPROCESSING COMPLETE!")
@@ -412,3 +579,7 @@ if __name__ == '__main__':
         print(f"  Total matches: {len(cleaned_data):,}")
         print(f"  Arsenal matches: {len(arsenal_data):,}")
         print(f"  Date range: {cleaned_data['Date'].min()} to {cleaned_data['Date'].max()}")
+        print(f"\n✓ All processed files saved to data/processed/:")
+        print(f"  - epl_cleaned.csv")
+        print(f"  - arsenal_labeled.csv")
+        print(f"  - league_standings.csv")
