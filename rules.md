@@ -27,13 +27,16 @@ This document defines the rules and ordered tasks required to complete the proje
 - [ ] **Set up Python environment**
   - [ ] Create a virtual environment (e.g., `venv` or `conda`).
   - [ ] Install required libraries: `pandas`, `numpy`, `scikit-learn`, `matplotlib`, `seaborn` (optional), `jupyter`.
+  - [ ] Install deep learning libraries: `tensorflow`, `keras` (for neural networks).
   - [ ] Add a `requirements.txt` or `pyproject.toml`.
 - [ ] **Create initial notebooks / scripts**
   - [ ] `notebooks/01_exploration.ipynb`
   - [ ] `notebooks/02_modeling.ipynb`
+  - [ ] `notebooks/03_deep_learning.ipynb` (NEW: for deep learning experiments)
   - [ ] `src/data_preprocessing.py`
   - [ ] `src/features.py`
   - [ ] `src/train_models.py`
+  - [ ] `src/train_deep_learning.py` (NEW: for neural network training)
   - [ ] `src/evaluate.py`
 
 ---
@@ -139,6 +142,8 @@ This document defines the rules and ordered tasks required to complete the proje
 
 ## 8. Advanced Models
 
+### 8.1 Traditional Machine Learning
+
 - [ ] **Random Forest model**
   - [ ] Train a **Random Forest** classifier.
   - [ ] Perform basic hyperparameter tuning (e.g., n_estimators, max_depth).
@@ -146,13 +151,77 @@ This document defines the rules and ordered tasks required to complete the proje
 - [ ] **(Optional but recommended) Gradient Boosting / XGBoost**
   - [ ] Train a gradient boosting model (e.g., XGBoost, LightGBM, or `sklearn.ensemble.GradientBoostingClassifier`).
   - [ ] Tune key hyperparameters.
-- [ ] **(Optional) Deep Learning model**
-  - [ ] Build a simple feedforward neural network (e.g., with Keras/PyTorch).
-  - [ ] Use the same feature matrix as input.
-  - [ ] Evaluate whether it outperforms traditional models.
-- [ ] **Compare models**
-  - [ ] Create a table of metrics for all models: Accuracy, F1, macro F1, weighted F1.
-  - [ ] Select the best-performing and most interpretable model as the **primary** model.
+  - [ ] Save model to `models/xgboost.pkl` (if implemented).
+
+### 8.2 Deep Learning Models
+
+- [ ] **Deep Learning: Feedforward Neural Network**
+
+  - [ ] Set up TensorFlow/Keras environment.
+  - [ ] Build a multi-layer feedforward neural network:
+    - [ ] Input layer: number of features
+    - [ ] Hidden layer 1: 64 neurons with ReLU activation
+    - [ ] Hidden layer 2: 32 neurons with ReLU activation
+    - [ ] Dropout layer (0.3) to prevent overfitting
+    - [ ] Output layer: 3 neurons (Win/Draw/Loss) with softmax activation
+  - [ ] Compile model with appropriate optimizer (e.g., Adam) and loss function (categorical_crossentropy).
+  - [ ] Implement early stopping and model checkpointing.
+  - [ ] Train model with validation split (e.g., 20%).
+  - [ ] Save trained model to `models/neural_network.h5`.
+  - [ ] Plot training history (loss and accuracy curves).
+  - [ ] Evaluate on test set and compare with traditional ML models.
+
+- [ ] **Deep Learning: LSTM (Long Short-Term Memory) Model**
+
+  - [ ] Prepare sequential data:
+    - [ ] Create sequences of last N matches (e.g., last 10 matches) for each prediction point.
+    - [ ] Each sequence contains features from previous matches.
+    - [ ] Ensure sequences only use past information (no data leakage).
+  - [ ] Build LSTM model architecture:
+    - [ ] Input layer: (sequence_length, n_features)
+    - [ ] LSTM layer 1: 64 units, return_sequences=True
+    - [ ] LSTM layer 2: 32 units
+    - [ ] Dense layer: 16 neurons with ReLU activation
+    - [ ] Output layer: 3 neurons (Win/Draw/Lraw/Loss) with softmax activation
+  - [ ] Compile and train LSTM model.
+  - [ ] Implement early stopping and validation monitoring.
+  - [ ] Save trained model to `models/lstm_model.h5`.
+  - [ ] Analyze what temporal patterns the LSTM learned.
+  - [ ] Compare LSTM performance with feedforward network and traditional ML.
+
+- [ ] **(Optional) Advanced: Hybrid LSTM + Feature Model**
+
+  - [ ] Combine sequential patterns (LSTM) with match-specific features (Dense layers).
+  - [ ] Architecture: Two parallel branches that merge before final prediction.
+  - [ ] Evaluate if hybrid approach improves performance.
+
+- [ ] **Deep Learning Model Comparison**
+  - [ ] Compare all deep learning models:
+    - [ ] Feedforward Neural Network
+    - [ ] LSTM Model
+    - [ ] (Optional) Hybrid Model
+  - [ ] Create performance comparison table.
+  - [ ] Analyze training curves and convergence behavior.
+  - [ ] Document which architecture works best and why.
+
+### 8.3 Comprehensive Model Comparison
+
+- [ ] **Compare all models (Traditional + Deep Learning)**
+  - [ ] Create a comprehensive comparison table:
+    - [ ] Logistic Regression (baseline)
+    - [ ] Random Forest
+    - [ ] (Optional) XGBoost
+    - [ ] Feedforward Neural Network
+    - [ ] LSTM Model
+  - [ ] Metrics to compare:
+    - [ ] Accuracy
+    - [ ] Precision, Recall, F1-score (per class)
+    - [ ] Macro F1, Weighted F1
+    - [ ] Training time
+    - [ ] Model complexity
+  - [ ] Visualize model performance comparison (bar charts, radar plots).
+  - [ ] Analyze which model type performs best and discuss why.
+  - [ ] Select the best-performing model as the **primary** model for predictions.
 
 ---
 
@@ -160,16 +229,25 @@ This document defines the rules and ordered tasks required to complete the proje
 
 - [ ] **Evaluate on test set**
   - [ ] Use the reserved 2024–25 test set (when outcomes are available) OR use the latest available full season as test.
-  - [ ] Generate:
-    - Confusion matrix
-    - Classification report
-    - Calibration of predicted probabilities (optional).
+  - [ ] Generate for all models:
+    - [ ] Confusion matrix
+    - [ ] Classification report
+    - [ ] Calibration of predicted probabilities (optional).
 - [ ] **Feature importance / interpretability**
   - [ ] For tree-based models:
     - [ ] Compute and plot feature importances.
   - [ ] For logistic regression:
     - [ ] Inspect coefficients and their signs.
-  - [ ] Interpret what features typically increase the chance of Win vs Loss.
+  - [ ] For deep learning models:
+    - [ ] Use techniques like SHAP values or permutation importance (if applicable).
+    - [ ] Analyze which features the neural network focuses on.
+    - [ ] Visualize learned patterns (e.g., attention weights for LSTM if using attention).
+  - [ ] Interpret what features typically increase the chance of Win vs Loss across all model types.
+- [ ] **Deep Learning Specific Analysis**
+  - [ ] Plot training/validation loss and accuracy curves for neural networks.
+  - [ ] Analyze overfitting/underfitting (compare training vs validation performance).
+  - [ ] For LSTM: Analyze what sequence patterns it learned (e.g., does it capture momentum?).
+  - [ ] Compare model complexity vs performance trade-offs.
 
 ---
 
@@ -205,10 +283,23 @@ This document defines the rules and ordered tasks required to complete the proje
     - [ ] Introduction and motivation
     - [ ] Data sources and preprocessing steps
     - [ ] Feature engineering methodology
-    - [ ] Model selection and training procedure
-    - [ ] Evaluation metrics and results
-    - [ ] Interpretation of key features
-    - [ ] Limitations and future work (e.g., adding player/tactical data, advanced deep learning).
+    - [ ] Model selection and training procedure:
+      - [ ] Traditional ML models (Logistic Regression, Random Forest)
+      - [ ] Deep learning models (Feedforward NN, LSTM)
+      - [ ] Architecture choices and hyperparameters
+    - [ ] Evaluation metrics and results:
+      - [ ] Comparison of all models
+      - [ ] Discussion of why deep learning models perform better/worse
+    - [ ] Interpretation of key features:
+      - [ ] Traditional ML feature importance
+      - [ ] Deep learning learned patterns
+    - [ ] Research findings:
+      - [ ] Answers to research questions
+      - [ ] Novel insights from deep learning approach
+    - [ ] Limitations and future work:
+      - [ ] Potential improvements (e.g., transformer models, attention mechanisms)
+      - [ ] Adding player/tactical data
+      - [ ] Real-time prediction system
 - [ ] **Code documentation**
   - [ ] Add docstrings and comments in `src/` files.
   - [ ] Update `README.md` with:
@@ -233,13 +324,55 @@ This document defines the rules and ordered tasks required to complete the proje
 
 ---
 
+## 8.5 Deep Learning Research Questions
+
+- [ ] **Formulate research questions**
+  - [ ] Do deep learning models outperform traditional ML for EPL match prediction?
+  - [ ] Does LSTM capture temporal patterns better than feedforward networks?
+  - [ ] What sequence length (last N matches) works best for LSTM?
+  - [ ] How do deep learning models handle class imbalance (Win/Draw/Loss)?
+  - [ ] What features are most important for each model type?
+- [ ] **Document findings**
+  - [ ] Answer each research question with evidence from experiments.
+  - [ ] Include in final report with supporting visualizations and metrics.
+
+---
+
 ## Completion Criteria
 
 The project is considered **complete** when:
 
 - [ ] A cleaned and feature-engineered dataset exists in `data/processed/`.
-- [ ] At least two ML models (e.g., Logistic Regression and Random Forest) are trained and evaluated.
-- [ ] Predictions for Arsenal’s fixtures are generated and saved.
+- [ ] At least two traditional ML models (e.g., Logistic Regression and Random Forest) are trained and evaluated.
+- [ ] At least two deep learning models (Feedforward Neural Network and LSTM) are trained and evaluated.
+- [ ] All models are compared comprehensively with performance metrics and visualizations.
+- [ ] Research questions about deep learning effectiveness are answered with evidence.
+- [ ] Predictions for Arsenal's fixtures are generated using the best-performing model.
 - [ ] Visualizations of performance and predictions are created.
 - [ ] A final written report and presentation slide deck are completed and stored in `reports/`.
 - [ ] Repository is organized, documented, and reproducible.
+- [ ] Deep learning models are saved and can be loaded for inference.
+
+---
+
+## Summary of changes
+
+1. Section 1: Added TensorFlow/Keras and new files
+2. Section 8: Expanded with deep learning subsections
+3. New Section 8.5: Research questions
+4. Section 9: Added deep learning evaluation methods
+5. Section 12: Added deep learning discussion to the report
+6. Completion Criteria: Updated to require deep learning models
+
+---
+
+## What this adds
+
+- Feedforward Neural Network (required)
+- LSTM Model (required)
+- Hybrid Model (optional, advanced)
+- Research questions to answer
+- Comprehensive model comparison
+- Deep learning-specific evaluation
+
+---
