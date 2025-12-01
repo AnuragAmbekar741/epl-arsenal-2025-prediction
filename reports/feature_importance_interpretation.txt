@@ -1,0 +1,21 @@
+FEATURE IMPORTANCE INTERPRETATION
+============================================================
+
+Top 10 Most Important Features:
+   1. avg_points_last5                   : 0.1619
+   2. form_points_last5                  : 0.1118
+   3. goal_diff_last5                    : 0.1026
+   4. shot_conversion_rate               : 0.0964
+   5. avg_shots_against_last5            : 0.0930
+   6. avg_shots_target_last5             : 0.0800
+   7. attacking_strength                 : 0.0786
+   8. avg_shots_target_against_last5     : 0.0685
+   9. avg_shots_last5                    : 0.0649
+  10. avg_goals_scored_last5             : 0.0612
+
+
+Key Insights:
+- Rolling window features (last 5 matches) are highly important
+- Recent form (goals, points, win rate) strongly predicts outcomes
+- Home advantage (Arsenal_Home) is a significant factor
+- Opponent strength and historical performance matter
